@@ -362,3 +362,66 @@ kbd { background: #080c13; border: 1px solid rgba(255,255,255,.13); padding: 6px
   .compare-grid { grid-template-columns: 1fr; }
   .compare-arrow { transform: rotate(90deg); min-height: 24px; }
 }
+
+/* Ajuste para exposición en una sola pantalla: versión compacta */
+.topbar { height: 66px; padding: 0 22px; }
+.stage { grid-template-columns: 240px 1fr; }
+.sidebar { padding: 16px 14px; gap: 12px; }
+.nav-item { padding: 8px 9px; }
+.presentation-area { grid-template-rows: 1fr 66px; }
+.slide { margin: 14px 18px 10px; padding: 22px 26px; border-radius: 20px; }
+.controls { padding: 0 18px 10px; gap: 12px; }
+.slide-title { font-size: clamp(28px, 3.25vw, 52px); margin-bottom: 10px; max-width: 1120px; }
+.slide-subtitle { font-size: clamp(14px, 1.15vw, 19px); line-height: 1.38; }
+.grid-2, .logic-board { gap: 16px; margin-top: 18px; }
+.grid-3 { gap: 12px; margin-top: 16px; }
+.card { padding: 14px; }
+.card h3 { font-size: 14px; margin-bottom: 6px; }
+.card p { font-size: 13px; line-height: 1.4; }
+.code { padding: 13px 14px; font-size: clamp(12px, .98vw, 15px); line-height: 1.46; border-radius: 14px; }
+.code-line { padding: 0 6px; }
+.trace-panel { gap: 8px; }
+.condition-box { padding: 11px 13px; border-radius: 13px; }
+.condition-expression { font-size: 15px; }
+.bool-pill { padding: 6px 9px; font-size: 11px; }
+.var-grid { gap: 7px; }
+.var-box { padding: 8px 10px; border-radius: 11px; }
+.var-name { font-size: 9px; }
+.var-value { margin-top: 2px; font-size: 17px; }
+.metric-row { gap: 7px; }
+.metric-card { padding: 8px 9px; }
+.metric-card small { font-size: 9px; }
+.metric-card strong { font-size: 16px; }
+.console { min-height: 118px; max-height: 170px; padding: 11px 13px; font-size: 12px; line-height: 1.42; border-radius: 13px; }
+.step-callout { margin-top: 11px; padding: 10px 12px; font-size: 13px; }
+.flow { margin-top: 16px; gap: 8px; }
+.flow-node { padding: 9px 12px; font-size: 13px; }
+.big-equation { margin-top: 16px; font-size: clamp(22px, 2.5vw, 36px); }
+.pill-row { margin-top: 13px; gap: 7px; }
+.pill { padding: 6px 9px; font-size: 11px; }
+.micro-tag { padding: 5px 8px; font-size: 10px; }
+.iteration-strip { gap: 6px; margin-top: 12px; }
+.iteration-chip { padding: 6px 9px; font-size: 11px; }
+.data-table th, .data-table td { padding: 8px 9px; font-size: 11px; }
+.dict-box { padding: 10px 12px; font-size: 12px; line-height: 1.5; }
+.truck { padding: 9px 10px; }
+.truck-head { font-size: 11px; }
+.package { padding: 4px 6px; font-size: 10px; }
+.area-chart { height: 128px; }
+.area-axis { font-size: 10px; }
+.compact-exercise { grid-template-columns: minmax(0, 1.13fr) minmax(300px, .87fr); }
+.compact-exercise .code { max-height: 385px; overflow-y: auto; }
+.compact-grid { grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); }
+.tall-code { max-height: 390px; overflow-y: auto; }
+.compact-table th, .compact-table td { padding: 6px 7px; font-size: 10px; }
+
+@media (max-height: 800px) and (min-width: 761px) {
+  .topbar { height: 58px; }
+  .slide { margin-top: 10px; padding-top: 18px; padding-bottom: 18px; }
+  .slide-title { font-size: clamp(25px, 3vw, 44px); }
+  .console { min-height: 95px; max-height: 135px; }
+  .code { font-size: clamp(11px, .92vw, 14px); line-height: 1.38; }
+  .presentation-area { grid-template-rows: 1fr 60px; }
+  .area-chart { height: 105px; }
+  .tall-code, .compact-exercise .code { max-height: 330px; }
+}

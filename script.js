@@ -1,3 +1,184 @@
+
+function traceClone(state, extra = {}) {
+  const copy = { ...state };
+  if (state.trucks) copy.trucks = state.trucks.map(t => [...t]);
+  if (state.seen) copy.seen = state.seen.map(x => ({...x}));
+  if (state.stocks) copy.stocks = {...state.stocks};
+  if (state.diffs) copy.diffs = {...state.diffs};
+  return { ...copy, ...extra };
+}
+
+function renderLineConsole(lines) {
+  if (!lines || !lines.length) return '<div class="console-line muted">Aún no hay salida.</div>';
+  return lines.map(([kind, txt]) => `<div class="console-line ${kind}">${txt}</div>`).join('');
+}
+
+function buildProductionTrace() {
+  const trace=[]; const state={turn:'—',production:'—',total:0}; const out=[];
+  const push=(line,msg,phase='')=>trace.push(traceClone(state,{line,msg,phase,console:[...out]}));
+  push(0,'Inicializamos el acumulador total en 0.','Inicialización');
+  const vals=[120,130,110];
+  vals.forEach((v,i)=>{
+    state.turn=i+1; state.production='—';
+    push(1,`El for asigna turno = ${i+1}.`,'Nueva iteración');
+    state.production=v; out.push(['input',`Ingrese cantidad producida para el turno ${i+1}: ${v}`]);
+    push(2,`Leemos ${v} unidades para el turno ${i+1}.`,'Lectura');
+    state.total += v;
+    push(3,`Actualizamos total: ahora vale ${state.total}.`,'Acumular');
+  });
+  out.push(['output',`Producción total: ${state.total} unidades`]);
+  push(4,'El for terminó después de 3 iteraciones. Mostramos el total.','Salida');
+  return trace;
+}
+
+function buildToolsTrace() {
+  const tools=['Llaves','Destornillador','Martillo','Sierra','Sierra','Llaves','Destornillador','Martillo','Sierra','Llaves','Llaves','Destornillador','Llaves','Sierra','Taladro'];
+  const trace=[]; const out=[];
+  const state={i:'—',tool:'—',Llaves:0,Destornillador:0,Martillo:0,Sierra:0,Taladro:0};
+  const push=(line,msg,test='—',bool=null,phase='')=>trace.push(traceClone(state,{line,msg,test,bool,phase,console:[...out]}));
+  push(0,'Inicializamos llaves en 0.','—',null,'Inicialización');
+  push(1,'Inicializamos destornilladores en 0.','—',null,'Inicialización');
+  push(2,'Inicializamos martillos en 0.','—',null,'Inicialización');
+  push(3,'Inicializamos sierras en 0.','—',null,'Inicialización');
+  push(4,'Inicializamos taladros en 0.','—',null,'Inicialización');
+  const checks=[['Llaves',7,8],['Destornillador',9,10],['Martillo',11,12],['Sierra',13,14],['Taladro',15,16]];
+  tools.forEach((tool,idx)=>{
+    state.i=idx+1; state.tool='—'; push(5,`El for inicia la iteración ${idx+1} de 15.`,'—',null,'Nueva iteración');
+    state.tool=tool; out.push(['input',`Herramienta ${idx+1}: ${tool}`]);
+    push(6,`Leemos “${tool}”.`,'—',null,'Lectura');
+    for(const [name,checkLine,incLine] of checks){
+      const ok=tool===name;
+      push(checkLine,`¿La herramienta es ${name}?`,`${tool} == ${name}`,ok,checkLine===7?'Evaluar if':'Evaluar elif');
+      if(ok){
+        state[name] += 1;
+        push(incLine,`Sí. Incrementamos ${name}: ahora vale ${state[name]}.`,'—',null,'Actualizar contador');
+        break;
+      }
+    }
+  });
+  const outputs=[['Llaves',17],['Destornillador',18],['Martillo',19],['Sierra',20],['Taladro',21]];
+  outputs.forEach(([name,line])=>{out.push(['output',`${name}: ${state[name]} unidad(es)`]); push(line,`Mostramos el contador final de ${name}.`,'—',null,'Salida');});
+  return trace;
+}
+
+function buildAreaTrace() {
+  const trace=[]; const state={x:'—',lado2:'—',area:'—',best:-1,xBest:'—'}; const out=[];
+  const push=(line,msg,test='—',bool=null,phase='')=>trace.push(traceClone(state,{line,msg,test,bool,phase,console:[...out]}));
+  push(0,'Inicializamos area_max = -1.','—',null,'Inicialización');
+  push(1,'Inicializamos x_max = None.','—',null,'Inicialización');
+  for(let x=10;x<=30;x++){
+    state.x=x; state.lado2='—'; state.area='—'; push(2,`El for asigna x = ${x}.`,'—',null,'Nueva iteración');
+    state.lado2=100-2*x; push(3,`Calculamos lado2 = 100 - 2×${x} = ${state.lado2}.`,'—',null,'Calcular lado');
+    state.area=x*state.lado2; push(4,`Calculamos área = ${x} × ${state.lado2} = ${state.area}.`,'—',null,'Calcular área');
+    const prev=state.best; const better=state.area>prev;
+    push(5,`Comparamos ${state.area} con el máximo actual ${prev}.`,`${state.area} > ${prev}`,better,'Evaluar if');
+    if(better){state.best=state.area; push(6,`Actualizamos area_max = ${state.best}.`,'—',null,'Actualizar máximo'); state.xBest=x; push(7,`Actualizamos x_max = ${x}.`,'—',null,'Guardar x del máximo');}
+  }
+  out.push(['output',`Área máxima encontrada en cm²: ${state.best}`]); push(8,'Mostramos el área máxima final.','—',null,'Salida');
+  out.push(['output',`Valor de x en cm correspondiente: ${state.xBest}`]); push(9,'Mostramos el valor de x que produjo el máximo.','—',null,'Salida');
+  return trace;
+}
+
+function buildTruckTrace() {
+  const packages=[5.5,6.0,3.0,8.0,2.5,6.0,4.5];
+  const trace=[]; const out=[];
+  const state={i:'—',current:'—',camiones:1,carga:0,total:0,trucks:[[]]};
+  const push=(line,msg,test='—',bool=null,phase='')=>trace.push(traceClone(state,{line,msg,test,bool,phase,console:[...out]}));
+  push(0,'Inicializamos camiones = 1.','—',null,'Inicialización');
+  push(1,'Inicializamos carga_actual = 0.','—',null,'Inicialización');
+  push(2,'Inicializamos volumen_total = 0.','—',null,'Inicialización');
+  packages.forEach((v,idx)=>{
+    state.i=idx+1; state.current='—'; push(3,`El for inicia el paquete ${idx+1}.`,'—',null,'Nueva iteración');
+    state.current=v; out.push(['input',`Volumen paquete ${idx+1}: ${v} m³`]); push(4,`Leemos ${v} m³.`,'—',null,'Lectura');
+    const candidate=state.carga+v; const over=candidate>20;
+    push(5,`Comparamos carga_actual + volumen = ${state.carga.toFixed(1)} + ${v.toFixed(1)} = ${candidate.toFixed(1)}.`,`${candidate.toFixed(1)} > 20`,over,'Evaluar if');
+    if(over){state.camiones+=1; state.trucks.push([]); push(6,`Abrimos un nuevo camión. camiones = ${state.camiones}.`,'—',null,'Nuevo camión'); state.carga=0; push(7,'Reiniciamos carga_actual = 0 para el nuevo camión.','—',null,'Reiniciar carga');}
+    state.carga+=v; state.trucks[state.trucks.length-1].push(v); push(8,`Cargamos el paquete. carga_actual = ${state.carga.toFixed(1)}.`,'—',null,'Acumular carga');
+    state.total+=v; push(9,`Actualizamos volumen_total = ${state.total.toFixed(1)}.`,'—',null,'Acumular total');
+  });
+  out.push(['output',`Cantidad total de camiones empleados: ${state.camiones}`]); push(10,'Mostramos la cantidad de camiones usados.','—',null,'Salida');
+  out.push(['output',`Volumen total de los paquetes cargados: ${state.total.toFixed(1)} m³`]); push(11,'Mostramos el volumen total de todos los paquetes.','—',null,'Salida');
+  return trace;
+}
+
+function buildClientTrace() {
+  const clients=[
+    {name:'Luis',cat:'A',amount:80},
+    {name:'Marta',cat:'B',amount:600},
+    {name:'Juan',cat:'C',amount:1500},
+    {name:'Elena',cat:'B',amount:90}
+  ];
+  const trace=[]; const out=[];
+  const state={i:'—',name:'—',cat:'—',amount:'—',discount:'—',final:'—',A:0,B:0,C:0,consuelo:0,leader:'—',leaderCat:'—',leaderFinal:-1,seen:[]};
+  const push=(line,msg,test='—',bool=null,phase='')=>trace.push(traceClone(state,{line,msg,test,bool,phase,console:[...out]}));
+  push(0,'Inicializamos los contadores A, B, C y consuelo en 0.','—',null,'Inicialización');
+  push(1,'Inicializamos mayor_final = -1.','—',null,'Inicialización');
+  push(2,'Inicializamos los datos del cliente con mayor monto final.','—',null,'Inicialización');
+  clients.forEach((c,idx)=>{
+    state.i=idx+1; state.name='—'; state.cat='—'; state.amount='—'; state.discount='—'; state.final='—';
+    push(3,`El for inicia el cliente ${idx+1}.`,'—',null,'Nueva iteración');
+    state.name=c.name; out.push(['input',`Nombre cliente ${idx+1}: ${c.name}`]); push(4,`Leemos el nombre: ${c.name}.`,'—',null,'Lectura');
+    state.cat=c.cat; out.push(['input',`Categoría: ${c.cat}`]); push(5,`Leemos la categoría: ${c.cat}.`,'—',null,'Lectura');
+    const invalid=!['A','B','C'].includes(c.cat); push(6,'Validamos que la categoría sea A, B o C.',`${c.cat} not in (A,B,C)`,invalid,'Validar categoría');
+    state.amount=c.amount; out.push(['input',`Monto de compra: S/ ${c.amount}`]); push(8,`Leemos el monto: S/ ${c.amount}.`,'—',null,'Lectura');
+    let discount=0, consuelo=false;
+    const a=c.cat==='A' && c.amount<100; push(9,'Evaluamos la regla de categoría A.',`cat == A and monto < 100`,a,'Evaluar if');
+    if(a){discount=c.amount*.03; state.discount=discount; push(10,`Aplicamos 3%: descuento = S/ ${discount.toFixed(2)}.`,'—',null,'Calcular descuento');}
+    else {
+      const b=c.cat==='B' && c.amount>=100 && c.amount<=1000; push(11,'Evaluamos la regla de categoría B.',`cat == B and 100 <= monto <= 1000`,b,'Evaluar elif');
+      if(b){discount=50; state.discount=discount; push(12,'Aplicamos descuento fijo de S/ 50.','—',null,'Calcular descuento');}
+      else {
+        const cc=c.cat==='C' && c.amount>1000; push(13,'Evaluamos la regla de categoría C.',`cat == C and monto > 1000`,cc,'Evaluar elif');
+        if(cc){discount=c.amount*.12; state.discount=discount; push(14,`Aplicamos 12%: descuento = S/ ${discount.toFixed(2)}.`,'—',null,'Calcular descuento');}
+        else {push(15,'Ninguna regla principal se cumplió: entramos al else.','—',null,'Else'); discount=5; state.discount=discount; push(16,'Aplicamos descuento consuelo de S/ 5.','—',null,'Calcular descuento'); state.consuelo+=1; consuelo=true; push(17,`Incrementamos consuelo = ${state.consuelo}.`,'—',null,'Actualizar contador');}
+      }
+    }
+    state.final=c.amount-discount; push(18,`Monto final = ${c.amount} - ${discount.toFixed(2)} = S/ ${state.final.toFixed(2)}.`,'—',null,'Calcular monto final');
+    const isA=c.cat==='A'; push(19,'¿La categoría es A?',`${c.cat} == A`,isA,'Clasificar categoría');
+    if(isA){state.A++; push(20,`contA = ${state.A}.`,'—',null,'Actualizar contador');}
+    else {const isB=c.cat==='B'; push(21,'Como no es A, evaluamos si es B.',`${c.cat} == B`,isB,'Clasificar categoría'); if(isB){state.B++; push(22,`contB = ${state.B}.`,'—',null,'Actualizar contador');} else {push(23,'No es A ni B, así que corresponde a C.','—',null,'Else'); state.C++; push(24,`contC = ${state.C}.`,'—',null,'Actualizar contador');}}
+    const greater=state.final>state.leaderFinal; push(25,`Comparamos S/ ${state.final.toFixed(2)} con el mayor actual ${state.leaderFinal<0?'—':'S/ '+state.leaderFinal.toFixed(2)}.`,`final > mayor_final`,greater,'Evaluar máximo');
+    if(greater){state.leaderFinal=state.final; push(26,`Actualizamos mayor_final = S/ ${state.leaderFinal.toFixed(2)}.`,'—',null,'Actualizar máximo'); state.leader=c.name; push(27,`Guardamos nombre_mayor = ${c.name}.`,'—',null,'Guardar nombre'); state.leaderCat=c.cat; push(28,`Guardamos categoria_mayor = ${c.cat}.`,'—',null,'Guardar categoría');}
+    state.seen.push({name:c.name,cat:c.cat,amount:c.amount,discount,final:state.final,consuelo});
+    out.push(['output',`${c.name} - Monto final: S/ ${state.final.toFixed(2)}`]); push(29,`Mostramos el resultado de ${c.name}.`,'—',null,'Salida por cliente');
+  });
+  const n=clients.length;
+  state.pctA=(state.A/n*100).toFixed(0)+'%'; push(30,`Calculamos %A = ${state.pctA}.`,'—',null,'Estadística');
+  state.pctB=(state.B/n*100).toFixed(0)+'%'; push(31,`Calculamos %B = ${state.pctB}.`,'—',null,'Estadística');
+  state.pctC=(state.C/n*100).toFixed(0)+'%'; push(32,`Calculamos %C = ${state.pctC}.`,'—',null,'Estadística');
+  state.pctCons=(state.consuelo/n*100).toFixed(0)+'%'; push(33,`Calculamos % con descuento consuelo = ${state.pctCons}.`,'—',null,'Estadística');
+  out.push(['output',`Porcentaje por categoría: A: ${state.pctA}, B: ${state.pctB}, C: ${state.pctC}`]);
+  out.push(['output',`Porcentaje con Descuento Consuelo: ${state.pctCons}`]);
+  out.push(['output',`Cliente con mayor monto final: ${state.leader} (S/ ${state.leaderFinal.toFixed(2)}, categoría ${state.leaderCat})`]);
+  push(34,'Mostramos el reporte estadístico final.','—',null,'Salida global');
+  return trace;
+}
+
+function buildDictionaryTrace() {
+  const data=[['Pieza A',100,90],['Pieza B',60,70],['Pieza C',80,80]];
+  const trace=[]; const out=[];
+  const state={N:'—',i:'—',name:'—',A:'—',B:'—',product:'—',values:'—',stocks:{},diffs:{}};
+  const push=(line,msg,phase='')=>trace.push(traceClone(state,{line,msg,phase,console:[...out]}));
+  push(0,'Creamos stocks como diccionario vacío.','Inicialización');
+  state.N=3; out.push(['input','Cantidad de productos a comparar: 3']); push(1,'Leemos N = 3.','Lectura');
+  data.forEach((d,idx)=>{
+    state.i=idx+1; state.name='—'; state.A='—'; state.B='—'; push(2,`El primer for inicia el producto ${idx+1}.`,'Nueva iteración');
+    state.name=d[0]; out.push(['input',`Nombre: ${d[0]}`]); push(3,`Leemos el nombre ${d[0]}.`,'Lectura');
+    state.A=d[1]; out.push(['input',`Stock A: ${d[1]}`]); push(4,`Leemos stock A = ${d[1]}.`,'Lectura');
+    state.B=d[2]; out.push(['input',`Stock B: ${d[2]}`]); push(5,`Leemos stock B = ${d[2]}.`,'Lectura');
+    state.stocks[d[0]]=[d[1],d[2]]; push(6,`Guardamos '${d[0]}': (${d[1]}, ${d[2]}) en stocks.`,'Guardar en diccionario');
+  });
+  push(7,'Creamos diferencias como diccionario vacío.','Inicialización');
+  data.forEach((d,idx)=>{
+    state.product=d[0]; state.values=[d[1],d[2]]; push(8,`El segundo for toma ${d[0]} y su tupla.`,'Nueva iteración');
+    state.A=d[1]; state.B=d[2]; push(9,`Desempaquetamos valores: a = ${d[1]}, b = ${d[2]}.`,'Desempaquetar');
+    state.diffs[d[0]]=d[1]-d[2]; push(10,`Calculamos ${d[1]} - ${d[2]} = ${d[1]-d[2]} y lo guardamos.`,'Calcular diferencia');
+  });
+  out.push(['output',`Stocks: {'Pieza A': (100, 90), 'Pieza B': (60, 70), 'Pieza C': (80, 80)}`]); push(11,'Mostramos el diccionario original.','Salida');
+  out.push(['output',`Diferencias: {'Pieza A': 10, 'Pieza B': -10, 'Pieza C': 0}`]); push(12,'Mostramos el diccionario de diferencias.','Salida');
+  return trace;
+}
+
 const slides = [
   {
     title: "¿Qué hace realmente un for?",
@@ -233,255 +414,94 @@ const slides = [
   },
   {
     title: "Ejercicio 2 · Producción de 3 turnos",
-    short: "Acumulador",
-    steps: 5,
+    short: "Acumulador · línea por línea",
+    steps: buildProductionTrace().length,
     render(step) {
-      const values = [120,130,110];
-      const processed = Math.min(Math.max(step,0),3);
-      const total = values.slice(0, processed).reduce((a,b)=>a+b,0);
-      const current = step>=1 && step<=3 ? step : null;
-      return `
-        <div class="slide-kicker">05 · Ejercicio 2 · Acumulador</div>
-        <h2 class="slide-title">Tres turnos → <span class="highlight">tres iteraciones</span></h2>
-        <p class="slide-subtitle">El objetivo es sumar 120 + 130 + 110 y obtener una producción total de 360 unidades.</p>
-        <div class="logic-board">
-          <div>
-            <div class="micro-tag" style="margin-bottom:10px">CÓDIGO PYTHON</div>
-            <div class="code">
-              <span class="code-line ${step===0?'active':''}">total = <span class="num">0</span></span>
-              <span class="code-line ${step>=1 && step<=3?'active':''}"><span class="kw">for</span> turno <span class="kw">in</span> range(1, 4):</span>
-              <span class="code-line ${step>=1 && step<=3?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;produccion = int(input(...))</span>
-              <span class="code-line ${step>=1 && step<=3?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;total = total + produccion</span>
-              <span class="code-line ${step>=4?'active':''}">print(<span class="str">"Producción total:"</span>, total)</span>
-            </div>
-            <div class="iteration-strip">${[1,2,3].map((v,i)=>`<div class="iteration-chip ${i<processed?'done':i===processed && step>0 && step<=3?'active':''}">turno ${v}</div>`).join('')}</div>
-            <div class="step-callout"><strong>${step===0?'Inicialización':step<=3?'Acumular':'Resultado'}</strong><span>${productionNote(step,total)}</span></div>
-          </div>
-          <div class="trace-panel">
-            ${varBox('turno', current ?? (step>=4?'fin':'—'))}
-            ${varBox('producción leída', step>=1 && step<=3 ? values[step-1] : '—')}
-            ${varBox('total', total)}
-            <div class="console">${productionConsole(step, values)}</div>
-          </div>
-        </div>
-      `;
+      const trace=buildProductionTrace(); const t=trace[Math.min(step,trace.length-1)];
+      const code=[
+        `total = <span class="num">0</span>`,
+        `<span class="kw">for</span> turno <span class="kw">in</span> range(1, 4):`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;produccion = int(input(...))`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;total = total + produccion`,
+        `print(<span class="str">"Producción total:"</span>, total)`
+      ];
+      return `<div class="slide-kicker">05 · Ejercicio 2 · Ejecución línea por línea</div>
+        <h2 class="slide-title">Tres turnos → <span class="highlight">cada línea tiene un efecto</span></h2>
+        <div class="logic-board compact-exercise"><div><div class="micro-tag" style="margin-bottom:8px">CÓDIGO PYTHON · LÍNEA ACTUAL</div>
+        <div class="code">${code.map((l,i)=>`<span class="code-line ${i===t.line?'active':''}">${l}</span>`).join('')}</div>
+        <div class="step-callout"><strong>${t.phase}</strong><span>${t.msg}</span></div></div>
+        <div class="trace-panel">${varBox('turno',t.turn)}${varBox('producción',t.production)}${varBox('total',t.total)}<div class="console">${renderLineConsole(t.console)}</div></div></div>`;
     }
   },
   {
     title: "Ejercicio 1 · Contar 15 herramientas",
-    short: "Contadores",
-    steps: 17,
+    short: "Contadores · línea por línea",
+    steps: buildToolsTrace().length,
     render(step) {
-      const tools = ['Llaves','Destornillador','Martillo','Sierra','Sierra','Llaves','Destornillador','Martillo','Sierra','Llaves','Llaves','Destornillador','Llaves','Sierra','Taladro'];
-      const processed = Math.min(Math.max(step,0), tools.length);
-      const counts = countTools(tools.slice(0, processed));
-      const current = step>=1 && step<=15 ? tools[step-1] : '—';
-      return `
-        <div class="slide-kicker">06 · Ejercicio 1 · Múltiples contadores</div>
-        <h2 class="slide-title">Una vuelta por herramienta, <span class="highlight">un contador según el tipo</span></h2>
-        <div class="logic-board">
-          <div>
-            <div class="micro-tag" style="margin-bottom:10px">CÓDIGO PYTHON</div>
-            <div class="code">
-              <span class="code-line ${step===0?'active':''}">llaves = destornilladores = martillos = sierras = taladros = 0</span>
-              <span class="code-line ${step>=1 && step<=15?'active':''}"><span class="kw">for</span> i <span class="kw">in</span> range(1, 16):</span>
-              <span class="code-line ${step>=1 && step<=15?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;herramienta = input(...)</span>
-              <span class="code-line ${step>=1 && step<=15?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> herramienta == <span class="str">"Llaves"</span>:</span>
-              <span class="code-line ${step>=1 && step<=15?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;llaves += 1</span>
-              <span class="code-line ${step>=16?'active':''}">print(llaves, destornilladores, martillos, sierras, taladros)</span>
-            </div>
-            <div class="iteration-strip">${tools.map((_,i)=>`<div class="iteration-chip ${i<processed?'done':i===processed && step>=1 && step<=15?'active':''}">${i+1}</div>`).join('')}</div>
-            <div class="step-callout"><strong>Iteración ${step===0?'—':Math.min(step,15)}</strong><span>${toolNote(step,current)}</span></div>
-          </div>
-          <div class="trace-panel">
-            ${varBox('herramienta actual', current)}
-            <div class="metric-row">
-              ${metric('Llaves', counts.Llaves)}
-              ${metric('Dest.', counts.Destornillador)}
-              ${metric('Martillo', counts.Martillo)}
-              ${metric('Sierra', counts.Sierra)}
-              ${metric('Taladro', counts.Taladro)}
-            </div>
-            <div class="console">${toolConsole(step, tools)}</div>
-          </div>
-        </div>
-      `;
+      const trace=buildToolsTrace(); const t=trace[Math.min(step,trace.length-1)];
+      const code=[
+        `llaves = 0`,`destornilladores = 0`,`martillos = 0`,`sierras = 0`,`taladros = 0`,
+        `<span class="kw">for</span> i <span class="kw">in</span> range(1, 16):`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;herramienta = input(...)`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> herramienta == <span class="str">"Llaves"</span>:`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;llaves += 1`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> herramienta == <span class="str">"Destornillador"</span>:`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destornilladores += 1`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> herramienta == <span class="str">"Martillo"</span>:`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;martillos += 1`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> herramienta == <span class="str">"Sierra"</span>:`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sierras += 1`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> herramienta == <span class="str">"Taladro"</span>:`,
+        `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;taladros += 1`,
+        `print(<span class="str">"Llaves:"</span>, llaves)`, `print(<span class="str">"Destornillador:"</span>, destornilladores)`, `print(<span class="str">"Martillo:"</span>, martillos)`, `print(<span class="str">"Sierra:"</span>, sierras)`, `print(<span class="str">"Taladro:"</span>, taladros)`
+      ];
+      return `<div class="slide-kicker">06 · Ejercicio 1 · Ejecución línea por línea</div><h2 class="slide-title">Cada herramienta atraviesa la cadena de <span class="highlight">if / elif</span></h2>
+      <div class="logic-board compact-exercise"><div><div class="micro-tag" style="margin-bottom:8px">CÓDIGO PYTHON · LÍNEA ACTUAL</div><div class="code">${code.map((l,i)=>`<span class="code-line ${i===t.line?'active':''}">${l}</span>`).join('')}</div><div class="step-callout"><strong>${t.phase}</strong><span>${t.msg}</span></div></div>
+      <div class="trace-panel"><div class="condition-box"><span class="condition-expression">${t.test}</span>${t.bool===null?'<span class="bool-pill">—</span>':`<span class="bool-pill ${t.bool?'bool-true':'bool-false'}">${t.bool?'VERDADERO':'FALSO'}</span>`}</div>${varBox('i',t.i)}${varBox('herramienta',t.tool)}<div class="metric-row">${metric('Llaves',t.Llaves)}${metric('Dest.',t.Destornillador)}${metric('Martillo',t.Martillo)}${metric('Sierra',t.Sierra)}${metric('Taladro',t.Taladro)}</div><div class="console">${renderLineConsole(t.console)}</div></div></div>`;
     }
   },
   {
     title: "Ejercicio 4 · Buscar el área máxima",
-    short: "Máximo",
-    steps: 23,
+    short: "Máximo · línea por línea",
+    steps: buildAreaTrace().length,
     render(step) {
-      const xs = Array.from({length:21},(_,i)=>10+i);
-      const seenCount = Math.min(Math.max(step,0), xs.length);
-      const seen = xs.slice(0,seenCount);
-      const rows = seen.map(x=>({x,area:x*(100-2*x)}));
-      const best = rows.length ? rows.reduce((a,b)=>b.area>a.area?b:a) : {x:'—',area:'—'};
-      const activeX = step>=1 && step<=21 ? xs[step-1] : null;
-      const activeArea = activeX!==null ? activeX*(100-2*activeX) : null;
-      return `
-        <div class="slide-kicker">07 · Ejercicio 4 · Máximo progresivo</div>
-        <h2 class="slide-title">El máximo se descubre <span class="highlight">mientras recorremos x = 10…30</span></h2>
-        <div class="logic-board">
-          <div>
-            <div class="micro-tag" style="margin-bottom:10px">CÓDIGO PYTHON</div>
-            <div class="code">
-              <span class="code-line ${step===0?'active':''}">area_max = <span class="num">-1</span></span>
-              <span class="code-line ${step===0?'active':''}">x_max = <span class="kw">None</span></span>
-              <span class="code-line ${step>=1 && step<=21?'active':''}"><span class="kw">for</span> x <span class="kw">in</span> range(10, 31):</span>
-              <span class="code-line ${step>=1 && step<=21?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;lado2 = 100 - 2 * x</span>
-              <span class="code-line ${step>=1 && step<=21?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;area = x * lado2</span>
-              <span class="code-line ${step>=1 && step<=21?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> area &gt; area_max:</span>
-              <span class="code-line ${step>=1 && step<=21?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;area_max = area; x_max = x</span>
-              <span class="code-line ${step>=22?'active':''}">print(area_max, x_max)</span>
-            </div>
-            <div class="step-callout"><strong>${activeX!==null?`Probamos x = ${activeX}`:'Resultado'}</strong><span>${areaNote(step,activeX,activeArea,best)}</span></div>
-          </div>
-          <div class="trace-panel">
-            <div class="metric-row">
-              ${metric('x actual', activeX ?? '—')}
-              ${metric('área actual', activeArea ?? '—')}
-              ${metric('mejor área', best.area)}
-            </div>
-            ${varBox('x que produce el máximo', best.x)}
-            <div class="area-chart">${xs.map(x=>{
-              const area=x*(100-2*x); const h=Math.max(8,Math.round(area/1250*150));
-              const isSeen=seen.includes(x); const isBest=best.x===x; const isActive=activeX===x;
-              return `<div title="x=${x}, área=${area}" class="area-bar ${isSeen?'seen':''} ${isBest?'best':''} ${isActive?'active':''}" style="height:${h}px"></div>`;
-            }).join('')}</div>
-            <div class="area-axis"><span>x=10</span><span>x=25</span><span>x=30</span></div>
-          </div>
-        </div>
-      `;
+      const trace=buildAreaTrace(); const t=trace[Math.min(step,trace.length-1)];
+      const code=[`area_max = <span class="num">-1</span>`,`x_max = <span class="kw">None</span>`,`<span class="kw">for</span> x <span class="kw">in</span> range(10, 31):`,`&nbsp;&nbsp;&nbsp;&nbsp;lado2 = 100 - 2 * x`,`&nbsp;&nbsp;&nbsp;&nbsp;area = x * lado2`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> area &gt; area_max:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;area_max = area`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x_max = x`,`print(<span class="str">"Área máxima:"</span>, area_max)`,`print(<span class="str">"x:"</span>, x_max)`];
+      const xs=Array.from({length:21},(_,i)=>10+i);
+      return `<div class="slide-kicker">07 · Ejercicio 4 · Ejecución línea por línea</div><h2 class="slide-title">Calculamos y comparamos <span class="highlight">una línea a la vez</span></h2><div class="logic-board compact-exercise"><div><div class="micro-tag" style="margin-bottom:8px">CÓDIGO PYTHON · LÍNEA ACTUAL</div><div class="code">${code.map((l,i)=>`<span class="code-line ${i===t.line?'active':''}">${l}</span>`).join('')}</div><div class="step-callout"><strong>${t.phase}</strong><span>${t.msg}</span></div></div><div class="trace-panel"><div class="condition-box"><span class="condition-expression">${t.test}</span>${t.bool===null?'<span class="bool-pill">—</span>':`<span class="bool-pill ${t.bool?'bool-true':'bool-false'}">${t.bool?'VERDADERO':'FALSO'}</span>`}</div><div class="metric-row">${metric('x',t.x)}${metric('lado 2',t.lado2)}${metric('área',t.area)}${metric('máximo',t.best)}</div>${varBox('x del máximo',t.xBest)}<div class="area-chart">${xs.map(x=>{const a=x*(100-2*x),h=Math.max(8,Math.round(a/1250*120));return `<div class="area-bar ${typeof t.x==='number'&&x<=t.x?'seen':''} ${x===t.xBest?'best':''} ${x===t.x?'active':''}" style="height:${h}px"></div>`}).join('')}</div><div class="area-axis"><span>x=10</span><span>x=25</span><span>x=30</span></div><div class="console">${renderLineConsole(t.console)}</div></div></div>`;
     }
   },
   {
     title: "Ejercicio 7 · Cargar camiones",
-    short: "FOR + IF",
-    steps: 9,
+    short: "FOR + IF · línea por línea",
+    steps: buildTruckTrace().length,
     render(step) {
-      const packages = [5.5,6.0,3.0,8.0,2.5,6.0,4.5];
-      const processed = Math.min(Math.max(step,0),packages.length);
-      const state = truckState(packages.slice(0,processed));
-      const current = step>=1 && step<=7 ? packages[step-1] : null;
-      const preview = current!==null ? previewTruck(packages.slice(0,processed-1),current) : null;
-      return `
-        <div class="slide-kicker">08 · Ejercicio 7 · Decisión dentro del FOR</div>
-        <h2 class="slide-title">Cada paquete entra en el camión actual… <span class="highlight">si cabe</span></h2>
-        <div class="logic-board">
-          <div>
-            <div class="micro-tag" style="margin-bottom:10px">CÓDIGO PYTHON</div>
-            <div class="code">
-              <span class="code-line ${step===0?'active':''}">camiones = 1; carga_actual = 0; volumen_total = 0</span>
-              <span class="code-line ${step>=1 && step<=7?'active':''}"><span class="kw">for</span> i <span class="kw">in</span> range(1, N + 1):</span>
-              <span class="code-line ${step>=1 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;volumen = float(input(...))</span>
-              <span class="code-line ${step>=1 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> carga_actual + volumen &gt; 20:</span>
-              <span class="code-line ${step>=1 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;camiones += 1; carga_actual = 0</span>
-              <span class="code-line ${step>=1 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;carga_actual += volumen</span>
-              <span class="code-line ${step>=1 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;volumen_total += volumen</span>
-              <span class="code-line ${step>=8?'active':''}">print(camiones, volumen_total)</span>
-            </div>
-            <div class="step-callout"><strong>${current!==null?`Paquete ${step}: ${current} m³`:'Estado del proceso'}</strong><span>${truckNote(step,current,preview,state)}</span></div>
-          </div>
-          <div class="trace-panel">
-            <div class="metric-row">${metric('camiones',state.trucks.length)}${metric('volumen total',state.total.toFixed(1))}${metric('carga actual',state.current.toFixed(1))}</div>
-            <div class="trucks">${renderTrucks(state.trucks)}</div>
-            <div class="console">${truckConsole(step,packages,state)}</div>
-          </div>
-        </div>
-      `;
+      const trace=buildTruckTrace(); const t=trace[Math.min(step,trace.length-1)];
+      const code=[`camiones = 1`,`carga_actual = 0`,`volumen_total = 0`,`<span class="kw">for</span> i <span class="kw">in</span> range(1, N + 1):`,`&nbsp;&nbsp;&nbsp;&nbsp;volumen = float(input(...))`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> carga_actual + volumen &gt; 20:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;camiones += 1`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;carga_actual = 0`,`&nbsp;&nbsp;&nbsp;&nbsp;carga_actual += volumen`,`&nbsp;&nbsp;&nbsp;&nbsp;volumen_total += volumen`,`print(<span class="str">"Camiones:"</span>, camiones)`,`print(<span class="str">"Volumen total:"</span>, volumen_total)`];
+      return `<div class="slide-kicker">08 · Ejercicio 7 · Ejecución línea por línea</div><h2 class="slide-title">Cada paquete se evalúa <span class="highlight">antes de cargarlo</span></h2><div class="logic-board compact-exercise"><div><div class="micro-tag" style="margin-bottom:8px">CÓDIGO PYTHON · LÍNEA ACTUAL</div><div class="code">${code.map((l,i)=>`<span class="code-line ${i===t.line?'active':''}">${l}</span>`).join('')}</div><div class="step-callout"><strong>${t.phase}</strong><span>${t.msg}</span></div></div><div class="trace-panel"><div class="condition-box"><span class="condition-expression">${t.test}</span>${t.bool===null?'<span class="bool-pill">—</span>':`<span class="bool-pill ${t.bool?'bool-true':'bool-false'}">${t.bool?'VERDADERO':'FALSO'}</span>`}</div><div class="metric-row">${metric('paquete',t.i)}${metric('volumen',t.current)}${metric('camiones',t.camiones)}${metric('carga actual',Number(t.carga).toFixed(1))}${metric('total',Number(t.total).toFixed(1))}</div><div class="trucks">${renderTrucks(t.trucks)}</div><div class="console">${renderLineConsole(t.console)}</div></div></div>`;
     }
   },
   {
     title: "Ejercicio 8 · Clientes y descuentos",
-    short: "Clasificar + máximo",
-    steps: 8,
+    short: "Descuentos · línea por línea",
+    steps: buildClientTrace().length,
     render(step) {
-      const clients = [
-        {name:'Luis',cat:'A',amount:80,discount:2.4,final:77.6,kind:'3%'},
-        {name:'Marta',cat:'B',amount:600,discount:50,final:550,kind:'S/ 50'},
-        {name:'Juan',cat:'C',amount:1500,discount:180,final:1320,kind:'12%'},
-        {name:'Elena',cat:'B',amount:90,discount:5,final:85,kind:'Consuelo'}
-      ];
-      const processed = Math.min(Math.max(step,0), clients.length);
-      const seen = clients.slice(0,processed);
-      const counts = {A:0,B:0,C:0,consuelo:0};
-      seen.forEach(c=>{counts[c.cat]++; if(c.kind==='Consuelo') counts.consuelo++;});
-      const leader = seen.length ? seen.reduce((a,b)=>b.final>a.final?b:a) : null;
-      const current = step>=1 && step<=4 ? clients[step-1] : null;
-      return `
-        <div class="slide-kicker">09 · Ejercicio 8 · FOR + validación + máximo</div>
-        <h2 class="slide-title">Procesamos cada cliente y vamos construyendo <span class="highlight">estadísticas</span></h2>
-        <div class="grid-2">
-          <div>
-            <div class="micro-tag" style="margin-bottom:10px">CÓDIGO PYTHON</div>
-            <div class="code">
-              <span class="code-line ${step===0?'active':''}">contA = contB = contC = consuelo = 0</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}"><span class="kw">for</span> i <span class="kw">in</span> range(1, N + 1):</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;nombre = input(...)</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;categoria = input(...)</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while</span> categoria <span class="kw">not in</span> (<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"C"</span>): ...</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> categoria == <span class="str">"A"</span> <span class="kw">and</span> monto &lt; 100: descuento = monto * 0.03</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> categoria == <span class="str">"B"</span> <span class="kw">and</span> 100 &lt;= monto &lt;= 1000: descuento = 50</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> categoria == <span class="str">"C"</span> <span class="kw">and</span> monto &gt; 1000: descuento = monto * 0.12</span>
-              <span class="code-line ${step>=1 && step<=4?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">else</span>: descuento = 5</span>
-              <span class="code-line ${step>=5?'active':''}"># porcentajes y cliente con mayor monto final</span>
-            </div>
-            <div class="step-callout"><strong>${current?current.name:'Lectura pedagógica'}</strong><span>${clientNote(step,current,leader)}</span></div>
-          </div>
-          <div>
-            <table class="data-table">
-              <thead><tr><th>Cliente</th><th>Cat.</th><th>Compra</th><th>Descuento</th><th>Final</th></tr></thead>
-              <tbody>${clients.map((c,i)=>`<tr class="${i===processed-1 && step>=1 && step<=4?'active-row':''} ${leader && c.name===leader.name?'leader-row':''}"><td>${i<processed?c.name:'—'}</td><td>${i<processed?c.cat:'—'}</td><td>${i<processed?'S/ '+c.amount.toFixed(2):'—'}</td><td>${i<processed?'S/ '+c.discount.toFixed(2):'—'}</td><td>${i<processed?'S/ '+c.final.toFixed(2):'—'}</td></tr>`).join('')}</tbody>
-            </table>
-            <div class="metric-row" style="margin-top:12px">${metric('% A', pct(counts.A,processed))}${metric('% B', pct(counts.B,processed))}${metric('% C', pct(counts.C,processed))}</div>
-            <div class="metric-row" style="margin-top:10px">${metric('% consuelo',pct(counts.consuelo,processed))}${metric('mayor final',leader?`S/ ${leader.final.toFixed(2)}`:'—')}${metric('cliente',leader?leader.name:'—')}</div>
-          </div>
-        </div>
-      `;
+      const trace=buildClientTrace(); const t=trace[Math.min(step,trace.length-1)];
+      const code=[`contA = contB = contC = consuelo = 0`,`mayor_final = -1`,`nombre_mayor = <span class="str">""</span>; categoria_mayor = <span class="str">""</span>`,`<span class="kw">for</span> i <span class="kw">in</span> range(1, N + 1):`,`&nbsp;&nbsp;&nbsp;&nbsp;nombre = input(...)`,`&nbsp;&nbsp;&nbsp;&nbsp;categoria = input(...)`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while</span> categoria <span class="kw">not in</span> (<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"C"</span>):`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;categoria = input(...)`,`&nbsp;&nbsp;&nbsp;&nbsp;monto = float(input(...))`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> categoria == <span class="str">"A"</span> <span class="kw">and</span> monto &lt; 100:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;descuento = monto * 0.03`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> categoria == <span class="str">"B"</span> <span class="kw">and</span> 100 &lt;= monto &lt;= 1000:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;descuento = 50`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> categoria == <span class="str">"C"</span> <span class="kw">and</span> monto &gt; 1000:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;descuento = monto * 0.12`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">else</span>:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;descuento = 5`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;consuelo += 1`,`&nbsp;&nbsp;&nbsp;&nbsp;monto_final = monto - descuento`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> categoria == <span class="str">"A"</span>:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;contA += 1`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">elif</span> categoria == <span class="str">"B"</span>:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;contB += 1`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">else</span>:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;contC += 1`,`&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> monto_final &gt; mayor_final:`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mayor_final = monto_final`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nombre_mayor = nombre`,`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;categoria_mayor = categoria`,`&nbsp;&nbsp;&nbsp;&nbsp;print(nombre, monto_final)`,`pctA = contA / N * 100`,`pctB = contB / N * 100`,`pctC = contC / N * 100`,`pctConsuelo = consuelo / N * 100`,`print(pctA, pctB, pctC, pctConsuelo, nombre_mayor)`];
+      const seen=t.seen||[];
+      return `<div class="slide-kicker">09 · Ejercicio 8 · Ejecución línea por línea</div><h2 class="slide-title">Descuento, categoría y máximo: <span class="highlight">una decisión por vez</span></h2><div class="grid-2 compact-grid"><div><div class="micro-tag" style="margin-bottom:8px">CÓDIGO PYTHON · LÍNEA ACTUAL</div><div class="code tall-code">${code.map((l,i)=>`<span class="code-line ${i===t.line?'active':''}">${l}</span>`).join('')}</div><div class="step-callout"><strong>${t.phase}</strong><span>${t.msg}</span></div></div><div><div class="condition-box"><span class="condition-expression">${t.test}</span>${t.bool===null?'<span class="bool-pill">—</span>':`<span class="bool-pill ${t.bool?'bool-true':'bool-false'}">${t.bool?'VERDADERO':'FALSO'}</span>`}</div><table class="data-table compact-table"><thead><tr><th>Cliente</th><th>Cat.</th><th>Compra</th><th>Desc.</th><th>Final</th></tr></thead><tbody>${['Luis','Marta','Juan','Elena'].map(name=>{const c=seen.find(x=>x.name===name);return `<tr><td>${c?c.name:'—'}</td><td>${c?c.cat:'—'}</td><td>${c?'S/ '+c.amount.toFixed(2):'—'}</td><td>${c?'S/ '+c.discount.toFixed(2):'—'}</td><td>${c?'S/ '+c.final.toFixed(2):'—'}</td></tr>`}).join('')}</tbody></table><div class="metric-row" style="margin-top:8px">${metric('A',t.A)}${metric('B',t.B)}${metric('C',t.C)}${metric('Consuelo',t.consuelo)}</div><div class="metric-row" style="margin-top:7px">${metric('Cliente actual',t.name)}${metric('Monto final',typeof t.final==='number'?'S/ '+t.final.toFixed(2):t.final)}${metric('Mayor',t.leader)}${metric('Mayor final',t.leaderFinal>=0?'S/ '+t.leaderFinal.toFixed(2):'—')}</div><div class="console">${renderLineConsole(t.console)}</div></div></div>`;
     }
   },
   {
     title: "Ejercicio 10 · Diccionarios y segundo FOR",
-    short: "Diccionarios",
-    steps: 9,
+    short: "Diccionarios · línea por línea",
+    steps: buildDictionaryTrace().length,
     render(step) {
-      const data = [
-        {name:'Pieza A',A:100,B:90,diff:10},
-        {name:'Pieza B',A:60,B:70,diff:-10},
-        {name:'Pieza C',A:80,B:80,diff:0}
-      ];
-      const inputCount = Math.min(Math.max(step,0),3);
-      const diffCount = Math.min(Math.max(step-4,0),3);
-      const inputData = data.slice(0,inputCount);
-      const diffData = data.slice(0,diffCount);
-      return `
-        <div class="slide-kicker">10 · Ejercicio 10 · Dos recorridos</div>
-        <h2 class="slide-title">Primero llenamos un diccionario. Luego <span class="highlight">lo recorremos</span>.</h2>
-        <div class="grid-2">
-          <div>
-            <div class="micro-tag" style="margin-bottom:10px">CÓDIGO PYTHON</div>
-            <div class="code">
-              <span class="code-line ${step<=3?'active':''}">stocks = {}</span>
-              <span class="code-line ${step>=1 && step<=3?'active':''}"><span class="kw">for</span> i <span class="kw">in</span> range(1, N + 1):</span>
-              <span class="code-line ${step>=1 && step<=3?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;nombre = input(...); a = int(input(...)); b = int(input(...))</span>
-              <span class="code-line ${step>=1 && step<=3?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;stocks[nombre] = (a, b)</span>
-              <span class="code-line ${step===4?'active':''}">diferencias = {}</span>
-              <span class="code-line ${step>=5 && step<=7?'active':''}"><span class="kw">for</span> producto, valores <span class="kw">in</span> stocks.items():</span>
-              <span class="code-line ${step>=5 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;a, b = valores</span>
-              <span class="code-line ${step>=5 && step<=7?'active':''}">&nbsp;&nbsp;&nbsp;&nbsp;diferencias[producto] = a - b</span>
-              <span class="code-line ${step>=8?'active':''}">print(diferencias)</span>
-            </div>
-            <div class="step-callout"><strong>${dictionaryPhase(step)}</strong><span>${dictionaryNote(step,data)}</span></div>
-          </div>
-          <div class="trace-panel">
-            <div><div class="micro-tag" style="margin-bottom:8px">stocks</div><div class="dict-box">${renderStockDict(inputData)}</div></div>
-            <div><div class="micro-tag" style="margin-bottom:8px">diferencias</div><div class="dict-box">${renderDiffDict(diffData)}</div></div>
-            <div class="console">${dictConsole(step,data)}</div>
-          </div>
-        </div>
-      `;
+      const trace=buildDictionaryTrace(); const t=trace[Math.min(step,trace.length-1)];
+      const code=[`stocks = {}`,`N = int(input(...))`,`<span class="kw">for</span> i <span class="kw">in</span> range(1, N + 1):`,`&nbsp;&nbsp;&nbsp;&nbsp;nombre = input(...)`,`&nbsp;&nbsp;&nbsp;&nbsp;a = int(input(...))`,`&nbsp;&nbsp;&nbsp;&nbsp;b = int(input(...))`,`&nbsp;&nbsp;&nbsp;&nbsp;stocks[nombre] = (a, b)`,`diferencias = {}`,`<span class="kw">for</span> producto, valores <span class="kw">in</span> stocks.items():`,`&nbsp;&nbsp;&nbsp;&nbsp;a, b = valores`,`&nbsp;&nbsp;&nbsp;&nbsp;diferencias[producto] = a - b`,`print(stocks)`,`print(diferencias)`];
+      const stockEntries=Object.entries(t.stocks||{}).map(([k,v])=>({name:k,A:v[0],B:v[1]}));
+      const diffEntries=Object.entries(t.diffs||{}).map(([k,v])=>({name:k,diff:v}));
+      return `<div class="slide-kicker">10 · Ejercicio 10 · Ejecución línea por línea</div><h2 class="slide-title">Primero construimos <span class="highlight">stocks</span>; después construimos diferencias</h2><div class="logic-board compact-exercise"><div><div class="micro-tag" style="margin-bottom:8px">CÓDIGO PYTHON · LÍNEA ACTUAL</div><div class="code">${code.map((l,i)=>`<span class="code-line ${i===t.line?'active':''}">${l}</span>`).join('')}</div><div class="step-callout"><strong>${t.phase}</strong><span>${t.msg}</span></div></div><div class="trace-panel"><div>${varBox('i',t.i)}${varBox('producto actual',t.product)}</div><div><div class="micro-tag" style="margin-bottom:6px">stocks</div><div class="dict-box">${renderStockDict(stockEntries)}</div></div><div><div class="micro-tag" style="margin-bottom:6px">diferencias</div><div class="dict-box">${renderDiffDict(diffEntries)}</div></div><div class="console">${renderLineConsole(t.console)}</div></div></div>`;
     }
   },
   {
